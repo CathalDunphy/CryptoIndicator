@@ -216,15 +216,15 @@ async def send_gauge_email(
     recipient: str | None = None,
 ) -> dict[str, Any]:
     """Send the gauge by email over Gmail SMTP."""
-    smtp_user = os.environ.get("GMAIL_SMTP_USER")
     app_password = os.environ.get("GMAIL_APP_PASSWORD")
-    to_address = recipient or os.environ.get("GAUGE_RECIPIENT_EMAIL") or smtp_user
+    to_address = recipient or os.environ.get("GAUGE_RECIPIENT_EMAIL")
+    smtp_user = os.environ.get("GMAIL_SMTP_USER") or to_address
     if not to_address:
         return {"sent": False, "reason": "no recipient configured"}
-    if not smtp_user or not app_password:
+    if not app_password:
         return {
             "sent": False,
-            "reason": "Gmail SMTP not configured (set GMAIL_SMTP_USER and GMAIL_APP_PASSWORD)",
+            "reason": "Gmail SMTP not configured (set GMAIL_APP_PASSWORD)",
         }
 
     message = MIMEMultipart("alternative")
