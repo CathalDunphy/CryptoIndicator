@@ -1,0 +1,25 @@
+[project]
+name = "crypto-bull-bear-gauge"
+version = "0.1.0"
+description = "Daily bull/bear gauge of crypto sentiment from X accounts HenrikZeberg and DrProfitCrypto"
+requires-python = ">=3.12"
+dependencies = [
+    "mistralai-workflows[mistralai]>=3.10",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
