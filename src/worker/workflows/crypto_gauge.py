@@ -8,19 +8,16 @@ emails the result.
 import asyncio
 import json
 import os
+import smtplib
 from datetime import datetime, timedelta, timezone
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Any
 
 import pydantic
 import mistralai.workflows as workflows
 import mistralai.workflows.plugins.mistralai as workflows_mistralai
 from mistralai.client.models import TextChunk, WebSearchTool
-from mistralai.workflows import Depends
-from mistralai.workflows.plugins.mistralai.connectors import (
-    ToolCallClient,
-    connector,
-    uses_connectors,
-)
 
 TRACKED_ACCOUNTS = ["HenrikZeberg", "DrProfitCrypto"]
 
@@ -57,11 +54,6 @@ Field rules:
 - If you cannot find any recent crypto posts, set posts_found to 0,
   stance_score to 0, conviction to 0, and explain in summary.
 """
-
-
-gmail_connector = connector(
-    "gmail", run_as="deployment", auto_auth=False, credentials_name="workspace-gmail"
-)
 
 
 class Post(pydantic.BaseModel):
@@ -222,23 +214,33 @@ async def send_gauge_email(
     body: str,
     html_body: str,
     recipient: str | None = None,
-    gmail: ToolCallClient = Depends(gmail_connector),
 ) -> dict[str, Any]:
-    """Send the gauge by email through the Gmail connector."""
-    to_address = recipient or os.environ.get("GAUGE_RECIPIENT_EMAIL")
+    """Send the gauge by email over Gmail SMTP."""
+    smtp_user = os.environ.get("GMAIL_SMTP_USER")
+    app_password = os.environ.get("GMAIL_APP_PASSWORD")
+    to_address = recipient or os.environ.get("GAUGE_RECIPIENT_EMAIL") or smtp_user
     if not to_address:
         return {"sent": False, "reason": "no recipient configured"}
+    if not smtp_user or not app_password:
+        return {
+            "sent": False,
+            "reason": "Gmail SMTP not configured (set GMAIL_SMTP_USER and GMAIL_APP_PASSWORD)",
+        }
 
-    result = await gmail.call_tool(
-        tool_name="send_email",
-        arguments={
-            "to": [to_address],
-            "subject": subject,
-            "body": body,
-            "htmlBody": html_body,
-        },
-    )
-    return {"sent": True, "result": str(result)}
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = smtp_user
+    message["To"] = to_address
+    message.attach(MIMEText(body, "plain"))
+    message.attach(MIMEText(html_body, "html"))
+
+    def _send() -> None:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(smtp_user, app_password)
+            server.send_message(message)
+
+    await asyncio.to_thread(_send)
+    return {"sent": True, "to": to_address}
 
 
 def render_email(gauge: Gauge) -> tuple[str, str, str]:
@@ -297,7 +299,6 @@ def render_email(gauge: Gauge) -> tuple[str, str, str]:
         "scores their bull/bear stance, and emails a combined gauge."
     ),
 )
-@uses_connectors(gmail_connector)
 class CryptoBullBearGauge:
     @workflows.workflow.entrypoint
     async def run(self, input: GaugeInput) -> Gauge:

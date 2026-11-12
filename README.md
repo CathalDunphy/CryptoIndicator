@@ -18,8 +18,9 @@ Tracked accounts:
    overall score, a label (Strong Bear / Bearish / Neutral / Bullish / Strong Bull),
    the needle position (0 = full bear, 100 = full bull), and the disagreement between
    the two analysts.
-3. `send_gauge_email` — sends the gauge by email through the Gmail connector
-   (skipped with `dry_run: true` or when no recipient is configured).
+3. `send_gauge_email` — sends the gauge by email over Gmail SMTP using a Gmail
+   App Password provided through workspace secrets (skipped with `dry_run: true`
+   or when no recipient is configured).
 
 ## Input
 
@@ -54,10 +55,17 @@ git push origin main
 Then create/redeploy a deployment with Dockerfile path
 `deploy/docker/Dockerfile.worker` (build context: repository root).
 
-The deployment's service identity needs a **workspace credential** on the `gmail`
-connector in Studio (Connectors → Gmail → Credentials) so unattended scheduled runs
-can send email. Bind `GAUGE_RECIPIENT_EMAIL` as an environment variable via secrets
-bindings, or pass `recipient_email` in the schedule input.
+The deployment's service identity cannot use user-scoped OAuth connector
+credentials, so email sending uses Gmail SMTP with an **App Password** stored as
+a workspace secret:
+
+1. Google Account → Security → 2-Step Verification on → **App passwords** →
+   generate one for Mail.
+2. Studio → **Secrets Manager** → create a secret named `GMAIL_APP_PASSWORD`
+   with the app password.
+3. Bind `GMAIL_APP_PASSWORD` to the deployment via secrets bindings, and set
+   `GMAIL_SMTP_USER` (the sending address, plain env var) the same way. Or pass
+   `recipient_email` in the workflow/schedule input.
 
 ## Schedule
 
