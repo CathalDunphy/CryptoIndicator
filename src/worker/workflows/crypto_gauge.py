@@ -59,7 +59,9 @@ Field rules:
 """
 
 
-gmail_connector = connector("gmail", run_as="deployment", auto_auth=False)
+gmail_connector = connector(
+    "gmail", run_as="deployment", auto_auth=False, credentials_name="workspace-gmail"
+)
 
 
 class Post(pydantic.BaseModel):
