@@ -1,7 +1,8 @@
 # Crypto Bull/Bear Gauge
 
 A Mistral Workflow that tracks how bullish or bearish two macro/crypto voices on X
-are about the crypto market, and emails a daily gauge.
+are about the crypto market, and emails a daily gauge with two horizons:
+**short term** (next ~3 months) and **long term** (12+ months).
 
 Tracked accounts:
 
@@ -13,11 +14,12 @@ Tracked accounts:
 1. `analyze_account` — for each account, a durable agent (`mistral-medium-latest` with
    Mistral's built-in `WebSearchTool`) searches the web for the account's most recent
    crypto posts and returns a strict JSON verdict: a stance score from -100 (max bear)
-   to +100 (max bull), a conviction score (0-100), a summary, key claims, and sources.
-2. `build_gauge` — aggregates the verdicts into one gauge: a conviction-weighted
-   overall score, a label (Strong Bear / Bearish / Neutral / Bullish / Strong Bull),
-   the needle position (0 = full bear, 100 = full bull), and the disagreement between
-   the two analysts.
+   to +100 (max bull) for each horizon, a conviction score (0-100) per horizon, a
+   summary, key claims, and sources.
+2. `build_gauge` — aggregates the verdicts into two gauges (short term and long
+   term): a conviction-weighted overall score per horizon, a label (Strong Bear /
+   Bearish / Neutral / Bullish / Strong Bull), the needle position (0 = full bear,
+   100 = full bull), and the disagreement between the two analysts.
 3. `send_gauge_email` — sends the gauge by email over Gmail SMTP using a Gmail
    App Password provided through workspace secrets (skipped with `dry_run: true`
    or when no recipient is configured).
